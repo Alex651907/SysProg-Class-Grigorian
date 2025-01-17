@@ -15,6 +15,7 @@ long do_write_syscall(int, char *, int);
 //functions that are processor specific
 long do_real_syscall(long, long, long, long, long, long, long);
 
+//Linux syscall numbers tend to differ on different platforms
 #ifdef __aarch64__
     //> ausyscall aarch64 --dump | grep write
     #define WRITE_SYSCALL_NUM 64  
@@ -56,6 +57,9 @@ unsigned int systems_code_strlen(char *str){
 }
 
 void systems_code_str_to_upper(char *str) {
+    //remember c conventions for strings
+    //sequence of bytes, terminated by '\0' which is also byte=0
+    //'h','e','l','l','o','\0'
     char *ptr = str;
     if (!ptr) return;
     

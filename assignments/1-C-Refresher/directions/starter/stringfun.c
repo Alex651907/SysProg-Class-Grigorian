@@ -264,3 +264,10 @@ int main(int argc, char *argv[]){
 //          the buff variable will have exactly 50 bytes?
 //  
 //          PLACE YOUR ANSWER HERE
+/*
+            The length is still important, because even though we have buffer size
+            hardcoded to 50, this allows the program to theoretically work on any
+            buffer size as long as we change the constant. This way we can make
+            sure to prevent overflow errors while keeping it scalable to any
+            buffer size.
+*/

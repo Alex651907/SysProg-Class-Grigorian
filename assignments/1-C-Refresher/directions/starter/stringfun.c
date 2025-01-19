@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 
 #define BUFFER_SZ 50
@@ -38,9 +39,15 @@ int setup_buff(char *buff, char *user_str, int len){
         src++;
     }
 
-    //String is too large
-    if (count >= len) {
+    // String is too large
+    if (*src != '\0' && count == len) { 
         return -1;
+    }
+
+    // Remove the last space if it's at the end
+    if (count > 0 && *(dst - 1) == ' ') {
+        dst--;
+        count--;
     }
 
     //Fill the rest of the buffer with periods
@@ -50,14 +57,15 @@ int setup_buff(char *buff, char *user_str, int len){
     }
 
     //Return the actual number of characters copied
-    return (dst - buff);
+    return count;
 }
 
 void print_buff(char *buff, int len){
-    printf("Buffer:  ");
+    printf("Buffer:  [");
     for (int i=0; i<len; i++){
         putchar(*(buff+i));
     }
+    putchar(']');
     putchar('\n');
 }
 
@@ -71,7 +79,7 @@ int count_words(char *buff, int len, int str_len){
     int word = 0;
 
     for (int i = 0; i < str_len; i++) {
-        if (*(buff + i) != ' ') {
+        if (*(buff + i) != ' ' && *(buff + i) != '.') {
             if (!word) {
                 word_count++;
                 word = 1;
@@ -85,21 +93,32 @@ int count_words(char *buff, int len, int str_len){
 
 //ADD OTHER HELPER FUNCTIONS HERE FOR OTHER REQUIRED PROGRAM OPTIONS
 void reverse_string(char *buff, int str_len) {
+    // Reverse the string in place in the buffer
     char *start = buff;
     char *end = buff + str_len - 1;
-    while (start < end) {
+
+    // Reverse the characters in the buffer
+    while (end > start) {
         char temp = *start;
         *start = *end;
         *end = temp;
         start++;
         end--;
     }
+
+    // Print the reversed string (ignoring periods)
     printf("Reversed String: ");
     for (int i = 0; i < str_len; i++) {
-        putchar(*(buff + i));
+        if (buff[i] != '.') {
+            putchar(buff[i]);
+        }
     }
-    putchar('\n');
+    printf("\n");
 }
+
+
+
+
 
 void word_print(char *buff, int str_len) {
     printf("Word Print\n----------\n");
@@ -107,8 +126,9 @@ void word_print(char *buff, int str_len) {
     int char_count = 0;
     int word = 0;
 
+    //Word count should ignore periods
     for (int i = 0; i < str_len; i++) {
-        if (*(buff + i) != ' ') {
+        if (*(buff + i) != ' ' && *(buff + i) != '.') {
             if (!word) {
                 printf("%d. ", index++);
                 word = 1;
@@ -126,6 +146,7 @@ void word_print(char *buff, int str_len) {
     if (word) {
         printf(" (%d)\n", char_count);
     }
+    printf("\nNumber of words returned: %d\n", index - 1);
 }
 
 int main(int argc, char *argv[]){
@@ -154,6 +175,18 @@ int main(int argc, char *argv[]){
     if (opt == 'h'){
         usage(argv[0]);
         exit(0);
+    }
+
+    //Handle search and replace flag before processing anything
+    if (opt == 'x') {
+        if (argc != 5) {
+            printf("Error: Missing arguments for -x. Usage: ./stringfun -x \"string\" search replace\n");
+            exit(1);
+        }
+
+        //Placeholder for now
+        printf("Not Implemented!\n");
+        exit(3);
     }
 
     //WE NOW WILL HANDLE THE REQUIRED OPERATIONS
@@ -185,6 +218,7 @@ int main(int argc, char *argv[]){
     user_str_len = setup_buff(buff, input_string, BUFFER_SZ);     //see todos
     if (user_str_len < 0){
         printf("Error setting up buffer, error = %d", user_str_len);
+        free(buff);
         exit(2);
     }
 
@@ -209,19 +243,6 @@ int main(int argc, char *argv[]){
         case 'w': 
             word_print(buff, user_str_len);
             break;
-            
-        // Search and replace
-        case 'x': 
-            if (argc != 5) {
-                printf("Error: Missing arguments for -x. Usage: ./stringfun -x \"string\" search replace\n");
-                free(buff);
-                exit(1);
-            }
-
-            //Placeholder for now
-            printf("Not Implemented!\n");
-            free(buff);
-            exit(3);
 
         default:
             usage(argv[0]);

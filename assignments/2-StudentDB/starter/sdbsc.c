@@ -21,8 +21,7 @@
  *            M_ERR_DB_OPEN on error
  *
  */
-int open_db(char *dbFile, bool should_truncate)
-{
+int open_db(char *dbFile, bool should_truncate) {
     // Set permissions: rw-rw----
     // see sys/stat.h for constants
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
@@ -31,17 +30,23 @@ int open_db(char *dbFile, bool should_truncate)
     // create it if it does not exist
     int flags = O_RDWR | O_CREAT;
 
-    if (should_truncate)
-        flags += O_TRUNC;
+    if (should_truncate) 
+        flags |= O_TRUNC;
 
     // Now open file
     int fd = open(dbFile, flags, mode);
 
-    if (fd == -1)
-    {
-        // Handle the error
-        printf(M_ERR_DB_OPEN);
+    if (fd == -1) {
+        perror("Error opening database file");
         return ERR_DB_FILE;
+    }
+
+    if (should_truncate) {
+        off_t file_size = lseek(fd, 0, SEEK_END);
+        if (file_size < MAX_STD_ID * STUDENT_RECORD_SIZE) {
+            lseek(fd, MAX_STD_ID * STUDENT_RECORD_SIZE - 1, SEEK_SET);
+            write(fd, "", 1); // Write a single byte to extend the file
+        }
     }
 
     return fd;
@@ -60,11 +65,27 @@ int open_db(char *dbFile, bool should_truncate)
  *
  *  console:  Does not produce any console I/O used by other functions
  */
-int get_student(int fd, int id, student_t *s)
-{
-    // TODO
-    return NOT_IMPLEMENTED_YET;
+int get_student(int fd, int id, student_t *s) {
+    off_t offset = (id - 1) * STUDENT_RECORD_SIZE;
+    if (lseek(fd, offset, SEEK_SET) == -1) {
+        return ERR_DB_FILE;
+    }
+
+    // Read the student record
+    ssize_t bytesRead = read(fd, s, STUDENT_RECORD_SIZE);
+    if (bytesRead == -1) {
+        return ERR_DB_FILE;
+    }
+
+
+    // Check if the student ID matches the one we're looking for
+    if (s->id == id) {
+        return NO_ERROR;
+    }
+
+    return SRCH_NOT_FOUND;
 }
+
 
 /*
  *  add_student
@@ -91,11 +112,45 @@ int get_student(int fd, int id, student_t *s)
  *            M_ERR_DB_WRITE    error writing to db file (adding student)
  *
  */
-int add_student(int fd, int id, char *fname, char *lname, int gpa)
-{
-    // TODO
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+int add_student(int fd, int id, char *fname, char *lname, int gpa) {
+    // Check if the student already exists
+    student_t existing_student = {0};
+    int rc = get_student(fd, id, &existing_student);
+    if (rc == NO_ERROR) {
+        printf("Cant add student with ID=%d, already exists in db.\n", id);
+        return ERR_DB_OP; // Student already exists
+    }
+
+    // Seek to the correct position
+    off_t offset = (id - 1) * STUDENT_RECORD_SIZE;
+    if (lseek(fd, offset, SEEK_SET) == -1) {
+        return ERR_DB_FILE;
+    }
+
+    // Create the new student record
+    student_t new_student = {id, "", "", gpa};
+    strncpy(new_student.fname, fname, sizeof(new_student.fname) - 1);
+    new_student.fname[sizeof(new_student.fname) - 1] = '\0';
+    strncpy(new_student.lname, lname, sizeof(new_student.lname) - 1);
+    new_student.lname[sizeof(new_student.lname) - 1] = '\0';
+
+
+    // Write the student to the database
+    ssize_t bytesWritten = write(fd, &new_student, STUDENT_RECORD_SIZE);
+    if (bytesWritten != STUDENT_RECORD_SIZE) {
+        return ERR_DB_FILE;
+    }
+
+    if (id == MAX_STD_ID) {
+        off_t file_size = lseek(fd, 0, SEEK_END);
+        if (file_size < MAX_STD_ID * STUDENT_RECORD_SIZE) {
+            lseek(fd, MAX_STD_ID * STUDENT_RECORD_SIZE - 1, SEEK_SET);
+            write(fd, "", 1); // Write a single byte to extend the file
+        }
+    }
+
+    printf("Student %d added to database.\n", new_student.id);
+    return NO_ERROR;
 }
 
 /*
@@ -120,11 +175,29 @@ int add_student(int fd, int id, char *fname, char *lname, int gpa)
  *            M_ERR_DB_WRITE     error writing to db file (adding student)
  *
  */
-int del_student(int fd, int id)
-{
-    // TODO
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+int del_student(int fd, int id) {
+    student_t student = {0};
+    int rc = get_student(fd, id, &student);
+    if (rc == SRCH_NOT_FOUND) {
+        printf("Student %d was not found in database.\n", id);
+        return ERR_DB_OP; // Student not found
+    }
+
+    // Seek to the correct position
+    off_t offset = (id - 1) * STUDENT_RECORD_SIZE;
+    if (lseek(fd, offset, SEEK_SET) == -1) {
+        return ERR_DB_FILE;
+    }
+
+    // ssize_t bytesWritten = write(fd, &EMPTY_STUDENT_RECORD, STUDENT_RECORD_SIZE);
+    student_t empty_student = {0}; // Create an empty record
+    ssize_t bytesWritten = write(fd, &empty_student, STUDENT_RECORD_SIZE);
+    if (bytesWritten != STUDENT_RECORD_SIZE) {
+        return ERR_DB_FILE;
+    }
+
+    printf("Student %d was deleted from database.\n", id);
+    return NO_ERROR;
 }
 
 /*
@@ -151,12 +224,33 @@ int del_student(int fd, int id)
  *            M_ERR_DB_WRITE   error writing to db file (adding student)
  *
  */
-int count_db_records(int fd)
-{
-    // TODO
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+int count_db_records(int fd) {
+    int record_count = 0;
+    student_t student = {0};
+
+    // Seek to the beginning of the file
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        perror("lseek failed");
+        return -1;
+    }
+
+    // Read records one by one
+    while (read(fd, &student, sizeof(student_t)) == sizeof(student_t)) {
+        if (student.id != 0) {
+            record_count++;
+        }
+    }
+
+    if (record_count == 0) {
+        printf("Database contains no student records.\n");
+    }
+    else {
+        printf("Database contains %d student record(s).\n", record_count);
+    }
+
+    return record_count;
 }
+
 
 /*
  *  print_db
@@ -191,11 +285,31 @@ int count_db_records(int fd)
  *            M_ERR_DB_READ    error reading or seeking the database file
  *
  */
-int print_db(int fd)
-{
-    // TODO
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+int print_db(int fd) {
+    student_t student = {0};
+    off_t offset = 0;
+    bool first = true;
+    bool found = false;
+
+    ssize_t bytesRead;
+    while ((bytesRead = read(fd, &student, STUDENT_RECORD_SIZE)) == STUDENT_RECORD_SIZE) {
+        if (student.id != 0) {
+            if (first) {
+                printf("ID      FIRST_NAME    LAST_NAME     GPA\n");
+                first = false;
+            }
+            printf("%-8d%-15s%-15s%.2f\n", student.id, student.fname, student.lname, student.gpa / 100.0);
+            found = true;
+        }
+    }
+
+    if (bytesRead == -1) return ERR_DB_FILE;
+
+    if (!found) {
+        printf("Database contains no student records.\n");
+    }
+
+    return NO_ERROR;
 }
 
 /*
@@ -226,10 +340,14 @@ int print_db(int fd)
  *                             s->id is zero
  *
  */
-void print_student(student_t *s)
-{
-    // TODO
-    printf(M_NOT_IMPL);
+void print_student(student_t *s) {
+    if (s == NULL || s->id == 0) {
+        printf("Invalid student!\n");
+        return;
+    }
+
+    printf("ID      FIRST_NAME    LAST_NAME     GPA\n");
+    printf("%-8d%-15s%-15s%.2f\n", s->id, s->fname, s->lname, s->gpa / 100.0);
 }
 
 /*
@@ -280,11 +398,33 @@ void print_student(student_t *s)
  *            M_ERR_DB_WRITE   error writing to db or tempdb file (adding student)
  *
  */
-int compress_db(int fd)
-{
-    // TODO
-    printf(M_NOT_IMPL);
-    return fd;
+int compress_db(int fd) {
+    int temp_fd = open(TMP_DB_FILE, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+    
+    if (temp_fd == -1) {
+        printf("Error creating temporary file!\n");
+        return ERR_DB_FILE;
+    }
+
+    student_t student = {0};
+    while (read(fd, &student, STUDENT_RECORD_SIZE) == STUDENT_RECORD_SIZE) {
+        if (student.id != 0) {
+            // Write valid records to the temporary file
+            write(temp_fd, &student, STUDENT_RECORD_SIZE);
+        }
+    }
+
+    close(fd);
+    close(temp_fd);
+
+    // Rename the temporary file to the original database file
+    if (rename(TMP_DB_FILE, DB_FILE) == -1) {
+        printf("Error renaming temporary file to database file!\n");
+        return ERR_DB_FILE;
+    }
+
+    printf("Database successfully compressed!\n");
+    return open_db(DB_FILE, false); // Return the new file descriptor
 }
 
 /*
@@ -302,8 +442,7 @@ int compress_db(int fd)
  *  console:  This function does not produce any output
  *
  */
-int validate_range(int id, int gpa)
-{
+int validate_range(int id, int gpa) {
 
     if ((id < MIN_STD_ID) || (id > MAX_STD_ID))
         return EXIT_FAIL_ARGS;
@@ -325,8 +464,7 @@ int validate_range(int id, int gpa)
  *  console:  This function prints the usage information
  *
  */
-void usage(char *exename)
-{
+void usage(char *exename) {
     printf("usage: %s -[h|a|c|d|f|p|z] options.  Where:\n", exename);
     printf("\t-h:  prints help\n");
     printf("\t-a id first_name last_name gpa(as 3 digit int):  adds a student\n");
@@ -355,8 +493,7 @@ int main(int argc, char *argv[])
 
     // This function must have at least one arg, and the arg must start
     // with a dash
-    if ((argc < 2) || (*argv[1] != '-'))
-    {
+    if ((argc < 2) || (*argv[1] != '-')) {
         usage(argv[0]);
         exit(1);
     }
@@ -366,8 +503,7 @@ int main(int argc, char *argv[])
     opt = (char)*(argv[1] + 1); // get the option flag
 
     // handle the help flag and then exit normally
-    if (opt == 'h')
-    {
+    if (opt == 'h') {
         usage(argv[0]);
         exit(EXIT_OK);
     }
@@ -376,8 +512,7 @@ int main(int argc, char *argv[])
     // note we are not truncating the file using the second
     // parameter
     fd = open_db(DB_FILE, false);
-    if (fd < 0)
-    {
+    if (fd < 0) {
         exit(EXIT_FAIL_DB);
     }
 
@@ -386,8 +521,7 @@ int main(int argc, char *argv[])
     // sdbsc.h for expected values.
 
     exit_code = EXIT_OK;
-    switch (opt)
-    {
+    switch (opt) {
     case 'a':
         //   arv[0] arv[1]  arv[2]      arv[3]    arv[4]  arv[5]
         // prog_name     -a      id  first_name last_name     gpa
@@ -406,8 +540,7 @@ int main(int argc, char *argv[])
         gpa = atoi(argv[5]);
 
         exit_code = validate_range(id, gpa);
-        if (exit_code == EXIT_FAIL_ARGS)
-        {
+        if (exit_code == EXIT_FAIL_ARGS) {
             printf(M_ERR_STD_RNG);
             break;
         }
@@ -433,8 +566,7 @@ int main(int argc, char *argv[])
         // prog_name     -d      id
         //-------------------------
         // example:  prog_name -d 100
-        if (argc != 3)
-        {
+        if (argc != 3) {
             usage(argv[0]);
             exit_code = EXIT_FAIL_ARGS;
             break;
@@ -451,8 +583,7 @@ int main(int argc, char *argv[])
         // prog_name     -f      id
         //-------------------------
         // example:  prog_name -f 100
-        if (argc != 3)
-        {
+        if (argc != 3) {
             usage(argv[0]);
             exit_code = EXIT_FAIL_ARGS;
             break;
@@ -460,8 +591,7 @@ int main(int argc, char *argv[])
         id = atoi(argv[2]);
         rc = get_student(fd, id, &student);
 
-        switch (rc)
-        {
+        switch (rc) {
         case NO_ERROR:
             print_student(&student);
             break;
@@ -508,8 +638,7 @@ int main(int argc, char *argv[])
         //       and reopen db indicating truncate=true
         close(fd);
         fd = open_db(DB_FILE, true);
-        if (fd < 0)
-        {
+        if (fd < 0) {
             exit_code = EXIT_FAIL_DB;
             break;
         }

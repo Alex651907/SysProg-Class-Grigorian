@@ -45,9 +45,17 @@
  *  See the provided test cases for output expectations.
  */
 int main() {
-    char cmd_buff[SH_CMD_MAX];
+    char *cmd_buff = NULL;
     int rc = 0;
     command_list_t clist;
+
+    //Allocate memory for cmd_buff dynamically
+    cmd_buff = (char *)malloc(SH_CMD_MAX * sizeof(char));
+    if (cmd_buff == NULL)
+    {
+        fprintf(stderr, "Error: Failed to allocate memory for command buffer.\n");
+        return EXIT_FAILURE;
+    }
 
     while (1) {
         printf("%s", SH_PROMPT);

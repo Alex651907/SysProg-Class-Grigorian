@@ -2,25 +2,5 @@
     "files.associations": {
         "unistd.h": "c",
         "syscall.h": "c"
-    },
-    "workbench.colorCustomizations": {
-        "activityBar.activeBackground": "#00c9cc",
-        "activityBar.background": "#00c9cc",
-        "activityBar.foreground": "#15202b",
-        "activityBar.inactiveForeground": "#15202b99",
-        "activityBarBadge.background": "#bf00bc",
-        "activityBarBadge.foreground": "#e7e7e7",
-        "commandCenter.border": "#e7e7e799",
-        "sash.hoverBorder": "#00c9cc",
-        "statusBar.background": "#009799",
-        "statusBar.foreground": "#e7e7e7",
-        "statusBarItem.hoverBackground": "#00c9cc",
-        "statusBarItem.remoteBackground": "#009799",
-        "statusBarItem.remoteForeground": "#e7e7e7",
-        "titleBar.activeBackground": "#009799",
-        "titleBar.activeForeground": "#e7e7e7",
-        "titleBar.inactiveBackground": "#00979999",
-        "titleBar.inactiveForeground": "#e7e7e799"
-    },
-    "peacock.remoteColor": "#009799"
+    }
 }

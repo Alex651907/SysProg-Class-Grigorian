@@ -55,8 +55,7 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
     // Reset cmd_count and re-parse the command line to populate clist
     cmd_count = 0;
     token = strtok_r(cmd_line, PIPE_STRING, &saveptr);
-    while (token != NULL && cmd_count < CMD_MAX)
-    {
+    while (token != NULL && cmd_count < CMD_MAX) {
         // Remove leading and trailing spaces
         while (isspace((unsigned char)*token)) token++;
         char *end = token + strlen(token) - 1;

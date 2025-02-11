@@ -40,10 +40,23 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
     // Initialize the command list
     memset(clist, 0, sizeof(command_list_t));
 
-    // Split the command line by pipes
+    // Count the number of commands (separated by '|')
     token = strtok_r(cmd_line, PIPE_STRING, &saveptr);
-    while (token != NULL && cmd_count < CMD_MAX) {
-        
+    while (token != NULL) {
+        cmd_count++;
+        token = strtok_r(NULL, PIPE_STRING, &saveptr);
+    }
+
+    // If the number of commands exceeds CMD_MAX, return an error
+    if (cmd_count > CMD_MAX) {
+        return ERR_TOO_MANY_COMMANDS;
+    }
+
+    // Reset cmd_count and re-parse the command line to populate clist
+    cmd_count = 0;
+    token = strtok_r(cmd_line, PIPE_STRING, &saveptr);
+    while (token != NULL && cmd_count < CMD_MAX)
+    {
         // Remove leading and trailing spaces
         while (isspace((unsigned char)*token)) token++;
         char *end = token + strlen(token) - 1;
@@ -52,7 +65,6 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
 
         // Split the command into executable and arguments
         char *exe = strtok(token, " ");
-
         if (exe != NULL) {
             strncpy(clist->commands[cmd_count].exe, exe, EXE_MAX - 1);
             clist->commands[cmd_count].exe[EXE_MAX - 1] = '\0';
@@ -74,9 +86,6 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
 
     if (cmd_count == 0) {
         return WARN_NO_CMDS;
-    }
-    else if (cmd_count > CMD_MAX) {
-        return ERR_TOO_MANY_COMMANDS;
     }
 
     clist->num = cmd_count;

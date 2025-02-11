@@ -59,20 +59,21 @@ int main() {
 
     while (1) {
         printf("%s", SH_PROMPT);
+
         if (fgets(cmd_buff, SH_CMD_MAX, stdin) == NULL) {
             printf("\n");
             break;
         }
 
-        // Remove the trailing \n from cmd_buff
+        //Remove the trailing \n from cmd_buff
         cmd_buff[strcspn(cmd_buff, "\n")] = '\0';
 
-        // Check for exit command
+        //Check for exit command
         if (strcmp(cmd_buff, EXIT_CMD) == 0) {
             break;
         }
 
-        // Check for dragon command (extra credit)
+        //Check for dragon command
         if (strcmp(cmd_buff, "dragon") == 0) {
             printf("                                                                        @%%%%                       \n");
             printf("                                                                     %%%%%%                         \n");

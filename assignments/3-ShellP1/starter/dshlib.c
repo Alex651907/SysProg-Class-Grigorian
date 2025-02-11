@@ -37,38 +37,40 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
     char *saveptr;
     int cmd_count = 0;
 
-    // Initialize the command list
+    //Initialize the command list
     memset(clist, 0, sizeof(command_list_t));
 
-    // Make a copy of the input string to avoid modifying the original
+    //Make a copy of the input string to avoid modifying the original
     char cmd_line_copy[SH_CMD_MAX];
     strncpy(cmd_line_copy, cmd_line, SH_CMD_MAX - 1);
     cmd_line_copy[SH_CMD_MAX - 1] = '\0';
 
-    // Count the number of commands (separated by '|')
+    //Count the number of commands (separated by '|')
     token = strtok_r(cmd_line_copy, PIPE_STRING, &saveptr);
     while (token != NULL) {
         cmd_count++;
         token = strtok_r(NULL, PIPE_STRING, &saveptr);
     }
 
-    // If the number of commands exceeds CMD_MAX, return an error
+    //If the number of commands exceeds CMD_MAX, return an error
     if (cmd_count > CMD_MAX) {
         return ERR_TOO_MANY_COMMANDS;
     }
 
-    // Reset cmd_count and re-parse the command line to populate clist
+    //Reset cmd_count and re-parse the command line to populate clist
     cmd_count = 0;
 
-    // Restore the original input
+    //Restore the original input
     strncpy(cmd_line_copy, cmd_line, SH_CMD_MAX - 1); 
     cmd_line_copy[SH_CMD_MAX - 1] = '\0';
     token = strtok_r(cmd_line_copy, PIPE_STRING, &saveptr);
 
     while (token != NULL && cmd_count < CMD_MAX) {
-        // Remove leading and trailing spaces
+        
+        //Remove leading and trailing spaces
         while (isspace((unsigned char)*token)) token++;
         char *end = token + strlen(token) - 1;
+        
         while (end > token && isspace((unsigned char)*end)) end--;
         *(end + 1) = '\0';
 
@@ -89,7 +91,6 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
 
             cmd_count++;
         }
-
         token = strtok_r(NULL, PIPE_STRING, &saveptr);
     }
 

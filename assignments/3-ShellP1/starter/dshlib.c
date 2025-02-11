@@ -40,8 +40,13 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
     // Initialize the command list
     memset(clist, 0, sizeof(command_list_t));
 
+    // Make a copy of the input string to avoid modifying the original
+    char cmd_line_copy[SH_CMD_MAX];
+    strncpy(cmd_line_copy, cmd_line, SH_CMD_MAX - 1);
+    cmd_line_copy[SH_CMD_MAX - 1] = '\0';
+
     // Count the number of commands (separated by '|')
-    token = strtok_r(cmd_line, PIPE_STRING, &saveptr);
+    token = strtok_r(cmd_line_copy, PIPE_STRING, &saveptr);
     while (token != NULL) {
         cmd_count++;
         token = strtok_r(NULL, PIPE_STRING, &saveptr);
@@ -54,7 +59,12 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
 
     // Reset cmd_count and re-parse the command line to populate clist
     cmd_count = 0;
-    token = strtok_r(cmd_line, PIPE_STRING, &saveptr);
+
+    // Restore the original input
+    strncpy(cmd_line_copy, cmd_line, SH_CMD_MAX - 1); 
+    cmd_line_copy[SH_CMD_MAX - 1] = '\0';
+    token = strtok_r(cmd_line_copy, PIPE_STRING, &saveptr);
+
     while (token != NULL && cmd_count < CMD_MAX) {
         // Remove leading and trailing spaces
         while (isspace((unsigned char)*token)) token++;

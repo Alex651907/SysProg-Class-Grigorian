@@ -32,8 +32,53 @@
  *  Standard Library Functions You Might Want To Consider Using
  *      memset(), strcmp(), strcpy(), strtok(), strlen(), strchr()
  */
-int build_cmd_list(char *cmd_line, command_list_t *clist)
-{
-    printf(M_NOT_IMPL);
-    return EXIT_NOT_IMPL;
+int build_cmd_list(char *cmd_line, command_list_t *clist) {
+    char *token;
+    char *saveptr;
+    int cmd_count = 0;
+
+    // Initialize the command list
+    memset(clist, 0, sizeof(command_list_t));
+
+    // Split the command line by pipes
+    token = strtok_r(cmd_line, PIPE_STRING, &saveptr);
+    while (token != NULL && cmd_count < CMD_MAX) {
+        
+        // Remove leading and trailing spaces
+        while (isspace((unsigned char)*token)) token++;
+        char *end = token + strlen(token) - 1;
+        while (end > token && isspace((unsigned char)*end)) end--;
+        *(end + 1) = '\0';
+
+        // Split the command into executable and arguments
+        char *exe = strtok(token, " ");
+
+        if (exe != NULL) {
+            strncpy(clist->commands[cmd_count].exe, exe, EXE_MAX - 1);
+            clist->commands[cmd_count].exe[EXE_MAX - 1] = '\0';
+
+            char *arg = strtok(NULL, "");
+            if (arg != NULL) {
+                strncpy(clist->commands[cmd_count].args, arg, ARG_MAX - 1);
+                clist->commands[cmd_count].args[ARG_MAX - 1] = '\0';
+            }
+            else {
+                clist->commands[cmd_count].args[0] = '\0';
+            }
+
+            cmd_count++;
+        }
+
+        token = strtok_r(NULL, PIPE_STRING, &saveptr);
+    }
+
+    if (cmd_count == 0) {
+        return WARN_NO_CMDS;
+    }
+    else if (cmd_count > CMD_MAX) {
+        return ERR_TOO_MANY_COMMANDS;
+    }
+
+    clist->num = cmd_count;
+    return OK;
 }

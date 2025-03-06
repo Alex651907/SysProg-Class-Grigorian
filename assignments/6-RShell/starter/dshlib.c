@@ -74,6 +74,8 @@
  */
 int exec_local_cmd_loop()
 {
+
+    // THIS CODE SHOULD BE THE SAME AS PRIOR ASSIGNMENTS
    
     return OK;
 }

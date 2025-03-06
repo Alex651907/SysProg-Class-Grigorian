@@ -92,7 +92,34 @@
  */
 int exec_remote_cmd_loop(char *address, int port)
 {
-    return WARN_RDSH_NOT_IMPL;
+    char *cmd_buff;
+    char *rsp_buff;
+    int cli_socket;
+    ssize_t io_size;
+    int is_eof;
+
+    // TODO set up cmd and response buffs
+
+    cli_socket = start_client(address,port);
+    if (cli_socket < 0){
+        perror("start client");
+        return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_CLIENT);
+    }
+
+    while (1) 
+    {
+        // TODO print prompt
+
+        // TODO fgets input
+
+        // TODO send() over cli_socket
+
+        // TODO recv all the results
+
+        // TODO break on exit command
+    }
+
+    return client_cleanup(cli_socket, cmd_buff, rsp_buff, OK);
 }
 
 /*
@@ -119,7 +146,14 @@ int exec_remote_cmd_loop(char *address, int port)
  * 
  */
 int start_client(char *server_ip, int port){
-    return WARN_RDSH_NOT_IMPL;
+    struct sockaddr_in addr;
+    int cli_socket;
+    int ret;
+
+    // TODO set up cli_socket
+
+
+    return cli_socket;
 }
 
 /*

@@ -50,8 +50,6 @@ int start_server(char *ifaces, int port, int is_threaded) {
     int svr_socket;
     int rc;
 
-    (void)is_threaded;  // Suppress unused parameter warning
-
     svr_socket = boot_server(ifaces, port);
     if (svr_socket < 0) {
         int err_code = svr_socket;  // server socket will carry error code
